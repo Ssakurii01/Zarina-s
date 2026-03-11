@@ -1,154 +1,156 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 using TMPro;
 
 public class GameUI : MonoBehaviour
 {
     [Header("HUD")]
-    [SerializeField] private TextMeshProUGUI _scoreText;
-    [SerializeField] private TextMeshProUGUI _waveText;
-    [SerializeField] private TextMeshProUGUI _comboText;
-    [SerializeField] private Slider _healthBar;
+    [SerializeField] private TextMeshProUGUI _bombTimerText;
+    [SerializeField] private TextMeshProUGUI _aliveCountText;
+    [SerializeField] private TextMeshProUGUI _roundText;
+    [SerializeField] private TextMeshProUGUI _bombHolderText;
 
-    [Header("Panels")]
+    [Header("Session Timer")]
+    [SerializeField] private TextMeshProUGUI _sessionTimerText;
+
+    [Header("Button Hints")]
+    [SerializeField] private TextMeshProUGUI _buttonHintsText;
+
+    [Header("Game Over Panel")]
     [SerializeField] private GameObject _gameOverPanel;
-    [SerializeField] private GameObject _pausePanel;
-    [SerializeField] private TextMeshProUGUI _finalScoreText;
-    [SerializeField] private TextMeshProUGUI _highScoreText;
-    [SerializeField] private TextMeshProUGUI _finalWaveText;
-
-    [Header("Combo Popup")]
-    [SerializeField] private float _comboFadeSpeed = 2f;
-    private float _comboDisplayTimer;
+    [SerializeField] private TextMeshProUGUI _winnerText;
+    [SerializeField] private TextMeshProUGUI _roundsSurvivedText;
+    [SerializeField] private Button _restartButton;
 
     void OnEnable()
     {
-        ScoreManager.OnScoreChanged += UpdateScore;
-        ScoreManager.OnComboChanged += UpdateCombo;
-        PlayerController.OnHealthChanged += UpdateHealth;
-        WaveManager.OnWaveStart += UpdateWave;
+        BombController.OnBombTimerChanged += UpdateBombTimer;
+        BombController.OnBombTransferred += UpdateBombHolder;
+        RoundManager.OnRoundStart += UpdateRound;
+        RoundManager.OnAliveCountChanged += UpdateAliveCount;
         GameManager.OnGameStateChanged += HandleGameState;
+        GameManager.OnTimerChanged += UpdateSessionTimer;
     }
 
     void OnDisable()
     {
-        ScoreManager.OnScoreChanged -= UpdateScore;
-        ScoreManager.OnComboChanged -= UpdateCombo;
-        PlayerController.OnHealthChanged -= UpdateHealth;
-        WaveManager.OnWaveStart -= UpdateWave;
+        BombController.OnBombTimerChanged -= UpdateBombTimer;
+        BombController.OnBombTransferred -= UpdateBombHolder;
+        RoundManager.OnRoundStart -= UpdateRound;
+        RoundManager.OnAliveCountChanged -= UpdateAliveCount;
         GameManager.OnGameStateChanged -= HandleGameState;
+        GameManager.OnTimerChanged -= UpdateSessionTimer;
     }
 
     void Start()
     {
         if (_gameOverPanel != null) _gameOverPanel.SetActive(false);
-        if (_pausePanel != null) _pausePanel.SetActive(false);
-        if (_comboText != null) _comboText.gameObject.SetActive(false);
+        if (_bombHolderText != null) _bombHolderText.text = "";
+
+        if (_buttonHintsText != null)
+            _buttonHintsText.text = "MOVE: A/D  |  JUMP: Space";
     }
 
-    void Update()
+    private void UpdateBombTimer(float time)
     {
-        // Fade out combo text
-        if (_comboDisplayTimer > 0)
+        if (_bombTimerText == null) return;
+
+        int seconds = Mathf.CeilToInt(time);
+        _bombTimerText.text = seconds.ToString();
+
+        if (time <= 5f)
         {
-            _comboDisplayTimer -= Time.deltaTime;
-            if (_comboDisplayTimer <= 0 && _comboText != null)
-            {
-                _comboText.gameObject.SetActive(false);
-            }
-        }
-    }
-
-    private void UpdateScore(int score, int combo)
-    {
-        if (_scoreText != null)
-            _scoreText.text = score.ToString("N0");
-    }
-
-    private void UpdateCombo(int killCount, int multiplier)
-    {
-        if (_comboText == null) return;
-
-        if (multiplier > 1)
-        {
-            _comboText.gameObject.SetActive(true);
-            _comboText.text = $"x{multiplier} COMBO!";
-            _comboDisplayTimer = _comboFadeSpeed;
-
-            // Scale based on combo
-            float scale = 1f + (multiplier - 1) * 0.2f;
-            _comboText.transform.localScale = Vector3.one * scale;
+            float flash = (Mathf.Sin(Time.time * 10f) + 1f) * 0.5f;
+            _bombTimerText.color = Color.Lerp(Color.red, Color.white, flash);
+            _bombTimerText.fontSize = Mathf.Lerp(72f, 90f, flash);
         }
         else
         {
-            _comboText.gameObject.SetActive(false);
+            _bombTimerText.color = Color.white;
+            _bombTimerText.fontSize = 72f;
         }
     }
 
-    private void UpdateHealth(int current, int max)
+    private void UpdateBombHolder(GameObject holder)
     {
-        if (_healthBar != null)
+        if (_bombHolderText == null || holder == null) return;
+
+        var player = holder.GetComponent<PlayerController>();
+        if (player != null)
         {
-            _healthBar.maxValue = max;
-            _healthBar.value = current;
+            _bombHolderText.text = "YOU HAVE THE BOMB!";
+            _bombHolderText.color = Color.red;
+        }
+        else
+        {
+            var bot = holder.GetComponent<BotController>();
+            string name = bot != null ? bot.BotName : holder.name;
+            _bombHolderText.text = $"{name} has the bomb";
+            _bombHolderText.color = Color.yellow;
         }
     }
 
-    private void UpdateWave(int wave)
+    private void UpdateRound(int round)
     {
-        if (_waveText != null)
-        {
-            _waveText.text = $"WAVE {wave}";
-            // Could add animation here
-        }
+        if (_roundText != null)
+            _roundText.text = $"ROUND {round}";
+
+        if (_bombHolderText != null)
+            _bombHolderText.text = "";
+    }
+
+    private void UpdateAliveCount(int count)
+    {
+        if (_aliveCountText != null)
+            _aliveCountText.text = $"{count} ALIVE";
+    }
+
+    private void UpdateSessionTimer(float timeRemaining)
+    {
+        if (_sessionTimerText == null) return;
+
+        int minutes = Mathf.FloorToInt(timeRemaining / 60f);
+        int seconds = Mathf.FloorToInt(timeRemaining % 60f);
+        _sessionTimerText.text = $"{minutes}:{seconds:00}";
+        _sessionTimerText.color = timeRemaining < 30f ? Color.red : Color.white;
     }
 
     private void HandleGameState(GameManager.GameState state)
     {
-        switch (state)
-        {
-            case GameManager.GameState.GameOver:
-                ShowGameOver();
-                break;
-            case GameManager.GameState.Paused:
-                if (_pausePanel != null) _pausePanel.SetActive(true);
-                break;
-            case GameManager.GameState.Playing:
-                if (_pausePanel != null) _pausePanel.SetActive(false);
-                break;
-        }
+        if (state == GameManager.GameState.GameOver)
+            ShowGameOver();
     }
 
     private void ShowGameOver()
     {
-        if (_gameOverPanel != null)
+        if (_gameOverPanel == null) return;
+
+        _gameOverPanel.SetActive(true);
+
+        if (_winnerText != null)
         {
-            _gameOverPanel.SetActive(true);
-
-            if (_finalScoreText != null && ScoreManager.Instance != null)
-                _finalScoreText.text = $"SCORE: {ScoreManager.Instance.Score:N0}";
-
-            if (_highScoreText != null && ScoreManager.Instance != null)
-                _highScoreText.text = $"BEST: {ScoreManager.Instance.HighScore:N0}";
-
-            if (_finalWaveText != null && WaveManager.Instance != null)
-                _finalWaveText.text = $"WAVE {WaveManager.Instance.CurrentWave}";
+            string winner = RoundManager.Instance != null ? RoundManager.Instance.WinnerName : "Unknown";
+            if (winner == "You")
+                _winnerText.text = "YOU WIN!";
+            else
+                _winnerText.text = $"{winner} WINS!";
         }
+
+        if (_roundsSurvivedText != null && ScoreManager.Instance != null)
+            _roundsSurvivedText.text = $"Rounds Survived: {ScoreManager.Instance.RoundsSurvived}";
+
+        if (_restartButton != null)
+            EventSystem.current.SetSelectedGameObject(_restartButton.gameObject);
     }
 
-    // Called by UI buttons
     public void OnRestartButton()
     {
-        GameManager.Instance.RestartGame();
-    }
-
-    public void OnResumeButton()
-    {
-        GameManager.Instance.ResumeGame();
+        GameManager.Instance?.RestartGame();
     }
 
     public void OnQuitButton()
     {
-        GameManager.Instance.QuitGame();
+        GameManager.Instance?.QuitGame();
     }
 }

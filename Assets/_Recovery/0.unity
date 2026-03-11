@@ -231,62 +231,20 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: baef04359d5b1bf4589368675bc25b94, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameUI
-  _bombTimerText: {fileID: 0}
-  _aliveCountText: {fileID: 0}
-  _roundText: {fileID: 0}
-  _bombHolderText: {fileID: 0}
-  _sessionTimerText: {fileID: 0}
+  _scoreText: {fileID: 0}
+  _waveText: {fileID: 0}
+  _comboText: {fileID: 0}
+  _healthBar: {fileID: 0}
+  _timerText: {fileID: 0}
   _buttonHintsText: {fileID: 0}
   _gameOverPanel: {fileID: 0}
-  _winnerText: {fileID: 0}
-  _roundsSurvivedText: {fileID: 0}
+  _finalScoreText: {fileID: 0}
+  _highScoreText: {fileID: 0}
+  _finalWaveText: {fileID: 0}
   _restartButton: {fileID: 0}
---- !u!1 &50495900
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 50495901}
-  - component: {fileID: 50495902}
-  m_Layer: 0
-  m_Name: LuxoddSessionManager
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &50495901
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 50495900}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &50495902
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 50495900}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 74290c0ca8b562a43bf15532ea9c5411, type: 3}
-  m_Name:
-  m_EditorClassIdentifier: Assembly-CSharp::LuxoddSessionManager
+  _comboFadeSpeed: 2
 --- !u!1 &50495943
 GameObject:
   m_ObjectHideFlags: 0
@@ -299,7 +257,7 @@ GameObject:
   - component: {fileID: 50495946}
   - component: {fileID: 50495945}
   - component: {fileID: 50495944}
-  m_Layer: 6
+  m_Layer: 0
   m_Name: Insky (1)
   m_TagString: Insky
   m_Icon: {fileID: 0}
@@ -399,6 +357,37 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1502611623}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &64576148
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 64576149}
+  m_Layer: 0
+  m_Name: 'LuxoddSessionManager '
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &64576149
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 64576148}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 5.13312, y: 0, z: 19.0923}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &253735391
 GameObject:
   m_ObjectHideFlags: 0
@@ -410,7 +399,6 @@ GameObject:
   - component: {fileID: 253735394}
   - component: {fileID: 253735393}
   - component: {fileID: 253735392}
-  - component: {fileID: 253735395}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -427,15 +415,18 @@ MonoBehaviour:
   m_GameObject: {fileID: 253735391}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9954e14fb75c36b4db58c2a1861aa81b, type: 3}
-  m_Name:
-  m_EditorClassIdentifier: Assembly-CSharp::RoundManager
-  _botPrefab: {fileID: 0}
-  _portalPrefab: {fileID: 0}
-  _spawnPoints: []
-  _botCount: 5
-  _delayBetweenRounds: 3
-  _deathsPerPortal: 2
+  m_Script: {fileID: 11500000, guid: d66a9e277b10f7247a9c5feed326d8dd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WaveManager
+  _swarmerPrefab: {fileID: 1502611619}
+  _dasherPrefab: {fileID: 0}
+  _orbiterPrefab: {fileID: 0}
+  _spawnMarginX: 8
+  _spawnMarginY: 15
+  _spawnDelay: 0.3
+  _timeBetweenWaves: 3
+  _baseEnemyCount: 5
+  _enemiesPerWaveIncrease: 3
 --- !u!114 &253735393
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -448,6 +439,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6d8380af81f3aeb47af78bc8f8b276a9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ScoreManager
+  _comboResetTime: 3
 --- !u!4 &253735394
 Transform:
   m_ObjectHideFlags: 0
@@ -463,21 +455,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &253735395
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 253735391}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 068c6ffe92bae4f4ab438bfe92e27116, type: 3}
-  m_Name:
-  m_EditorClassIdentifier: Assembly-CSharp::GameManager
-  _maxSessionTime: 600
-  _menuTimeoutSeconds: 30
-  _startTimeoutSeconds: 60
 --- !u!1 &330585543
 GameObject:
   m_ObjectHideFlags: 0
@@ -755,7 +732,7 @@ GameObject:
   - component: {fileID: 385696454}
   - component: {fileID: 385696453}
   - component: {fileID: 385696452}
-  m_Layer: 6
+  m_Layer: 0
   m_Name: Insky
   m_TagString: Insky
   m_Icon: {fileID: 0}
@@ -1073,7 +1050,6 @@ GameObject:
   - component: {fileID: 533324223}
   - component: {fileID: 533324222}
   - component: {fileID: 533324221}
-  - component: {fileID: 533324225}
   m_Layer: 0
   m_Name: portal (1)
   m_TagString: Untagged
@@ -1096,7 +1072,7 @@ SphereCollider:
     serializedVersion: 2
     m_Bits: 0
   m_LayerOverridePriority: 0
-  m_IsTrigger: 1
+  m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
@@ -1186,7 +1162,6 @@ GameObject:
   - component: {fileID: 591204521}
   - component: {fileID: 591204520}
   - component: {fileID: 591204519}
-  - component: {fileID: 591204523}
   m_Layer: 0
   m_Name: Jump
   m_TagString: Jumper
@@ -1209,7 +1184,7 @@ CapsuleCollider:
     serializedVersion: 2
     m_Bits: 0
   m_LayerOverridePriority: 0
-  m_IsTrigger: 1
+  m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 2
@@ -1302,7 +1277,7 @@ GameObject:
   - component: {fileID: 827662084}
   - component: {fileID: 827662083}
   - component: {fileID: 827662082}
-  m_Layer: 6
+  m_Layer: 0
   m_Name: Arena
   m_TagString: Arena
   m_Icon: {fileID: 0}
@@ -1463,7 +1438,7 @@ GameObject:
   - component: {fileID: 857346502}
   - component: {fileID: 857346501}
   - component: {fileID: 857346500}
-  m_Layer: 6
+  m_Layer: 0
   m_Name: Insky (2)
   m_TagString: Insky
   m_Icon: {fileID: 0}
@@ -1563,6 +1538,37 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1502611623}
   m_LocalEulerAnglesHint: {x: -0.891, y: 0, z: 0}
+--- !u!1 &1061153000
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1061153001}
+  m_Layer: 0
+  m_Name: FirePoint
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1061153001
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1061153000}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0.6, z: 0}
+  m_LocalScale: {x: 0.67468953, y: 0.51738566, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1097148361
 GameObject:
   m_ObjectHideFlags: 0
@@ -1575,7 +1581,7 @@ GameObject:
   - component: {fileID: 1097148364}
   - component: {fileID: 1097148363}
   - component: {fileID: 1097148362}
-  m_Layer: 6
+  m_Layer: 0
   m_Name: Insky move
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1687,7 +1693,6 @@ GameObject:
   - component: {fileID: 1172584592}
   - component: {fileID: 1172584591}
   - component: {fileID: 1172584590}
-  - component: {fileID: 1172584594}
   m_Layer: 0
   m_Name: Jump (1)
   m_TagString: Untagged
@@ -1710,7 +1715,7 @@ CapsuleCollider:
     serializedVersion: 2
     m_Bits: 0
   m_LayerOverridePriority: 0
-  m_IsTrigger: 1
+  m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 2
@@ -1802,7 +1807,7 @@ GameObject:
   - component: {fileID: 1187975371}
   - component: {fileID: 1187975370}
   - component: {fileID: 1187975369}
-  m_Layer: 6
+  m_Layer: 0
   m_Name: Insky (4)
   m_TagString: Insky
   m_Icon: {fileID: 0}
@@ -1914,7 +1919,7 @@ GameObject:
   - component: {fileID: 1205429342}
   - component: {fileID: 1205429341}
   - component: {fileID: 1205429340}
-  m_Layer: 6
+  m_Layer: 0
   m_Name: Insky
   m_TagString: Insky
   m_Icon: {fileID: 0}
@@ -2092,10 +2097,17 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerController
   _moveSpeed: 8
+  _rotationSpeed: 15
+  _bulletPrefab: {fileID: 1061153000}
+  _firePoint: {fileID: 1061153001}
+  _fireRate: 0.15
+  _bulletSpeed: 30
+  _bulletLifetime: 3
   _jumpForce: 8
   _groundLayer:
     serializedVersion: 2
     m_Bits: 64
+  _maxHP: 5
 --- !u!1 &1351544564
 GameObject:
   m_ObjectHideFlags: 0
@@ -2108,7 +2120,6 @@ GameObject:
   - component: {fileID: 1351544567}
   - component: {fileID: 1351544566}
   - component: {fileID: 1351544565}
-  - component: {fileID: 1351544569}
   m_Layer: 0
   m_Name: portal
   m_TagString: Untagged
@@ -2131,7 +2142,7 @@ SphereCollider:
     serializedVersion: 2
     m_Bits: 0
   m_LayerOverridePriority: 0
-  m_IsTrigger: 1
+  m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
@@ -2222,7 +2233,7 @@ GameObject:
   - component: {fileID: 1502611622}
   - component: {fileID: 1502611621}
   - component: {fileID: 1502611620}
-  m_Layer: 6
+  m_Layer: 0
   m_Name: Insky
   m_TagString: Insky
   m_Icon: {fileID: 0}
@@ -2341,7 +2352,7 @@ GameObject:
   - component: {fileID: 1578443717}
   - component: {fileID: 1578443716}
   - component: {fileID: 1578443715}
-  m_Layer: 6
+  m_Layer: 0
   m_Name: Insky (3)
   m_TagString: Insky
   m_Icon: {fileID: 0}
@@ -2497,7 +2508,7 @@ GameObject:
   - component: {fileID: 1783216336}
   - component: {fileID: 1783216335}
   - component: {fileID: 1783216334}
-  m_Layer: 6
+  m_Layer: 0
   m_Name: Insky
   m_TagString: Insky
   m_Icon: {fileID: 0}
@@ -2597,225 +2608,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1502611623}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1351544569
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1351544564}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 371dfb3218ed96746bffbff3823c84b8, type: 3}
-  m_Name:
-  m_EditorClassIdentifier: Assembly-CSharp::Portal
-  _lifetime: 15
-  _cooldown: 1
-  _xMin: -7
-  _xMax: 7
-  _yMin: -12
-  _yMax: 12
---- !u!114 &533324225
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 533324220}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 371dfb3218ed96746bffbff3823c84b8, type: 3}
-  m_Name:
-  m_EditorClassIdentifier: Assembly-CSharp::Portal
-  _lifetime: 15
-  _cooldown: 1
-  _xMin: -7
-  _xMax: 7
-  _yMin: -12
-  _yMax: 12
---- !u!114 &591204523
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 591204518}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c1914c7f292ec6b46a023d3987394599, type: 3}
-  m_Name:
-  m_EditorClassIdentifier: Assembly-CSharp::JumpPad
-  _launchForce: 18
---- !u!114 &1172584594
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1172584589}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c1914c7f292ec6b46a023d3987394599, type: 3}
-  m_Name:
-  m_EditorClassIdentifier: Assembly-CSharp::JumpPad
-  _launchForce: 18
---- !u!1 &888800001
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 888800002}
-  - component: {fileID: 888800003}
-  - component: {fileID: 888800004}
-  - component: {fileID: 888800005}
-  - component: {fileID: 888800006}
-  - component: {fileID: 888800007}
-  m_Layer: 0
-  m_Name: Bomb
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 0
---- !u!4 &888800002
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 888800001}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 0.5, y: 0.5, z: 0.5}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!33 &888800003
-MeshFilter:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 888800001}
-  m_Mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
---- !u!23 &888800004
-MeshRenderer:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 888800001}
-  m_Enabled: 1
-  m_CastShadows: 1
-  m_ReceiveShadows: 1
-  m_DynamicOccludee: 1
-  m_StaticShadowCaster: 0
-  m_MotionVectors: 1
-  m_LightProbeUsage: 1
-  m_ReflectionProbeUsage: 1
-  m_RayTracingMode: 2
-  m_RayTraceProcedural: 0
-  m_RayTracingAccelStructBuildFlagsOverride: 0
-  m_RayTracingAccelStructBuildFlags: 1
-  m_SmallMeshCulling: 1
-  m_ForceMeshLod: -1
-  m_MeshLodSelectionBias: 0
-  m_RenderingLayerMask: 1
-  m_RendererPriority: 0
-  m_Materials:
-  - {fileID: 10303, guid: 0000000000000000f000000000000000, type: 0}
-  m_StaticBatchInfo:
-    firstSubMesh: 0
-    subMeshCount: 0
-  m_StaticBatchRoot: {fileID: 0}
-  m_ProbeAnchor: {fileID: 0}
-  m_LightProbeVolumeOverride: {fileID: 0}
-  m_ScaleInLightmap: 1
-  m_ReceiveGI: 1
-  m_PreserveUVs: 0
-  m_IgnoreNormalsForChartDetection: 0
-  m_ImportantGI: 0
-  m_StitchLightmapSeams: 1
-  m_SelectedEditorRenderState: 3
-  m_MinimumChartSize: 4
-  m_AutoUVMaxDistance: 0.5
-  m_AutoUVMaxAngle: 89
-  m_LightmapParameters: {fileID: 0}
-  m_GlobalIlluminationMeshLod: 0
-  m_SortingLayerID: 0
-  m_SortingLayer: 0
-  m_SortingOrder: 0
-  m_MaskInteraction: 0
-  m_AdditionalVertexStreams: {fileID: 0}
---- !u!135 &888800005
-SphereCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 888800001}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 1
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Radius: 0.5
-  m_Center: {x: 0, y: 0, z: 0}
---- !u!54 &888800006
-Rigidbody:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 888800001}
-  serializedVersion: 5
-  m_Mass: 1
-  m_LinearDamping: 0
-  m_AngularDamping: 0.05
-  m_CenterOfMass: {x: 0, y: 0, z: 0}
-  m_InertiaTensor: {x: 1, y: 1, z: 1}
-  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ImplicitCom: 1
-  m_ImplicitTensor: 1
-  m_UseGravity: 0
-  m_IsKinematic: 1
-  m_Interpolate: 0
-  m_Constraints: 0
-  m_CollisionDetection: 0
---- !u!114 &888800007
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 888800001}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f3a97d08a9ee3dd42a91b8518d044c0b, type: 3}
-  m_Name:
-  m_EditorClassIdentifier: Assembly-CSharp::BombController
-  _roundTime: 15
-  _transferCooldown: 0.5
-  _detectRadius: 1.5
-  _followOffset: {x: 0, y: 1.2, z: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -2831,8 +2623,8 @@ SceneRoots:
   - {fileID: 1351544568}
   - {fileID: 1596061089}
   - {fileID: 1329029538}
+  - {fileID: 1061153001}
   - {fileID: 438150804}
   - {fileID: 15341039}
   - {fileID: 253735394}
-  - {fileID: 50495901}
-  - {fileID: 888800002}
+  - {fileID: 64576149}

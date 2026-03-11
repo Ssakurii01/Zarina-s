@@ -1,19 +1,19 @@
 using UnityEngine;
 
-/// <summary>
-/// Generates the arena at runtime: floor + boundary walls.
-/// Attach this to an empty GameObject in the scene.
-/// </summary>
 public class ArenaSetup : MonoBehaviour
 {
-    [Header("Arena Settings")]
-    [SerializeField] private float _arenaSize = 40f;
+    [Header("Arena Settings (Portrait 9:16)")]
+    [SerializeField] private float _arenaWidth = 18f;
+    [SerializeField] private float _arenaHeight = 32f;
     [SerializeField] private float _wallHeight = 3f;
     [SerializeField] private float _wallThickness = 1f;
 
     [Header("Materials (assign in Inspector)")]
     [SerializeField] private Material _floorMaterial;
     [SerializeField] private Material _wallMaterial;
+
+    public float ArenaWidth => _arenaWidth;
+    public float ArenaHeight => _arenaHeight;
 
     void Awake()
     {
@@ -27,9 +27,8 @@ public class ArenaSetup : MonoBehaviour
         floor.name = "Arena Floor";
         floor.transform.parent = transform;
         floor.transform.localPosition = Vector3.zero;
-        // Rotate plane to face the camera (XY plane background)
         floor.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-        floor.transform.localScale = new Vector3(_arenaSize / 10f, 1f, _arenaSize / 10f);
+        floor.transform.localScale = new Vector3(_arenaWidth / 10f, 1f, _arenaHeight / 10f);
 
         if (_floorMaterial != null)
             floor.GetComponent<Renderer>().material = _floorMaterial;
@@ -37,33 +36,33 @@ public class ArenaSetup : MonoBehaviour
 
     private void CreateWalls()
     {
-        float halfSize = _arenaSize / 2f;
+        float halfW = _arenaWidth / 2f;
+        float halfH = _arenaHeight / 2f;
 
-        // Top wall (positive Y)
-        CreateWall("Wall_Top", new Vector3(0, halfSize, 0),
-            new Vector3(_arenaSize + _wallThickness, _wallThickness, _wallHeight));
-        // Bottom wall (negative Y)
-        CreateWall("Wall_Bottom", new Vector3(0, -halfSize, 0),
-            new Vector3(_arenaSize + _wallThickness, _wallThickness, _wallHeight));
-        // Right wall (positive X)
-        CreateWall("Wall_Right", new Vector3(halfSize, 0, 0),
-            new Vector3(_wallThickness, _arenaSize + _wallThickness, _wallHeight));
-        // Left wall (negative X)
-        CreateWall("Wall_Left", new Vector3(-halfSize, 0, 0),
-            new Vector3(_wallThickness, _arenaSize + _wallThickness, _wallHeight));
+        CreateWall("Wall_Top", new Vector3(0, halfH, 0),
+            new Vector3(_arenaWidth + _wallThickness, _wallThickness, _wallHeight));
+        CreateWall("Wall_Bottom", new Vector3(0, -halfH, 0),
+            new Vector3(_arenaWidth + _wallThickness, _wallThickness, _wallHeight), isGround: true);
+        CreateWall("Wall_Right", new Vector3(halfW, 0, 0),
+            new Vector3(_wallThickness, _arenaHeight + _wallThickness, _wallHeight));
+        CreateWall("Wall_Left", new Vector3(-halfW, 0, 0),
+            new Vector3(_wallThickness, _arenaHeight + _wallThickness, _wallHeight));
     }
 
-    private void CreateWall(string name, Vector3 position, Vector3 scale)
+    private void CreateWall(string name, Vector3 position, Vector3 scale, bool isGround = false)
     {
         GameObject wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        if (!string.IsNullOrEmpty(name))
-            wall.name = name;
-        else
-            wall.name = "ArenaWall";
+        wall.name = name;
         wall.tag = "Wall";
         wall.transform.parent = transform;
         wall.transform.localPosition = position;
         wall.transform.localScale = scale;
+
+        if (isGround)
+        {
+            int groundLayer = LayerMask.NameToLayer("Ground");
+            if (groundLayer >= 0) wall.layer = groundLayer;
+        }
 
         if (_wallMaterial != null)
             wall.GetComponent<Renderer>().material = _wallMaterial;
