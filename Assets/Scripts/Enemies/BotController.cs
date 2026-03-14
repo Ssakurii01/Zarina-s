@@ -3,8 +3,8 @@ using UnityEngine;
 public class BotController : MonoBehaviour
 {
     [Header("Movement")]
-    [SerializeField] private float _moveSpeed = 5f;
-    [SerializeField] private float _jumpForce = 8f;
+    [SerializeField] private float _moveSpeed = 4.5f;
+    [SerializeField] private float _jumpForce = 5.5f;
     [SerializeField] private LayerMask _groundLayer;
 
     [Header("AI")]
@@ -85,7 +85,8 @@ public class BotController : MonoBehaviour
         }
 
         // Jump at arena edges to avoid getting stuck
-        if (Mathf.Abs(transform.position.x) > 7.5f && IsGrounded())
+        float edge = (ArenaSetup.Instance?.ArenaWidth ?? 16f) * 0.45f;
+        if (Mathf.Abs(transform.position.x) > edge && IsGrounded())
         {
             _moveDirection = -_moveDirection;
             Jump();

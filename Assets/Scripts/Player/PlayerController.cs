@@ -7,7 +7,7 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float _moveSpeed = 8f;
 
     [Header("Jumping")]
-    [SerializeField] private float _jumpForce = 8f;
+    [SerializeField] private float _jumpForce = 5.5f;
     [SerializeField] private LayerMask _groundLayer;
 
     private Rigidbody _rb;

@@ -7,8 +7,8 @@ public class Portal : MonoBehaviour
     [SerializeField] private float _cooldown = 1f;
     [SerializeField] private float _xMin = -7f;
     [SerializeField] private float _xMax = 7f;
-    [SerializeField] private float _yMin = -12f;
-    [SerializeField] private float _yMax = 12f;
+    [SerializeField] private float _yMin = -6f;
+    [SerializeField] private float _yMax = 6f;
 
     private float _cooldownTimer;
 

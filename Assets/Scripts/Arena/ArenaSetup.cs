@@ -2,10 +2,12 @@ using UnityEngine;
 
 public class ArenaSetup : MonoBehaviour
 {
+    public static ArenaSetup Instance { get; private set; }
+
     [Header("Arena Settings (Portrait 9:16)")]
-    [SerializeField] private float _arenaWidth = 18f;
-    [SerializeField] private float _arenaHeight = 32f;
-    [SerializeField] private float _wallHeight = 3f;
+    [SerializeField] private float _arenaWidth = 14f;
+    [SerializeField] private float _arenaHeight = 16f;
+    [SerializeField] private float _wallHeight = 2f;
     [SerializeField] private float _wallThickness = 1f;
 
     [Header("Materials (assign in Inspector)")]
@@ -17,6 +19,9 @@ public class ArenaSetup : MonoBehaviour
 
     void Awake()
     {
+        if (Instance == null) Instance = this;
+        else { Destroy(gameObject); return; }
+
         CreateFloor();
         CreateWalls();
     }

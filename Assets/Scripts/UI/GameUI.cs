@@ -22,6 +22,7 @@ public class GameUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI _winnerText;
     [SerializeField] private TextMeshProUGUI _roundsSurvivedText;
     [SerializeField] private Button _restartButton;
+    [SerializeField] private TextMeshProUGUI _playAgainText;
 
     void OnEnable()
     {
@@ -135,10 +136,29 @@ public class GameUI : MonoBehaviour
                 _winnerText.text = "YOU WIN!";
             else
                 _winnerText.text = $"{winner} WINS!";
+            _winnerText.fontSize = 36f;
         }
 
         if (_roundsSurvivedText != null && ScoreManager.Instance != null)
+        {
             _roundsSurvivedText.text = $"Rounds Survived: {ScoreManager.Instance.RoundsSurvived}";
+            _roundsSurvivedText.fontSize = 24f;
+        }
+
+        // Make Play Again text clickable
+        if (_playAgainText != null)
+        {
+            _playAgainText.text = "PLAY AGAIN";
+            _playAgainText.fontSize = 28f;
+            var button = _playAgainText.GetComponent<Button>();
+            if (button == null)
+                button = _playAgainText.gameObject.AddComponent<Button>();
+            button.onClick.RemoveAllListeners();
+            button.onClick.AddListener(OnRestartButton);
+
+            // Make sure it has a raycast target for clicks
+            _playAgainText.raycastTarget = true;
+        }
 
         if (_restartButton != null)
             EventSystem.current.SetSelectedGameObject(_restartButton.gameObject);

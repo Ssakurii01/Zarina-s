@@ -69,7 +69,11 @@ public class RoundManager : MonoBehaviour
             if (_spawnPoints != null && i < _spawnPoints.Length && _spawnPoints[i] != null)
                 spawnPos = _spawnPoints[i].position;
             else
-                spawnPos = new Vector3(Random.Range(-7f, 7f), Random.Range(-10f, 10f), 0f);
+            {
+                float halfW = (ArenaSetup.Instance?.ArenaWidth ?? 16f) * 0.45f;
+                float halfH = (ArenaSetup.Instance?.ArenaHeight ?? 32f) * 0.45f;
+                spawnPos = new Vector3(UnityEngine.Random.Range(-halfW, halfW), UnityEngine.Random.Range(-halfH, halfH), 0f);
+            }
 
             GameObject bot = Instantiate(_botPrefab, spawnPos, Quaternion.identity);
             var botCtrl = bot.GetComponent<BotController>();
@@ -161,7 +165,9 @@ public class RoundManager : MonoBehaviour
     {
         if (_portalPrefab == null) return;
 
-        Vector3 pos = new Vector3(Random.Range(-7f, 7f), Random.Range(-8f, 8f), 0f);
+        float halfW = (ArenaSetup.Instance?.ArenaWidth ?? 16f) * 0.4f;
+        float halfH = (ArenaSetup.Instance?.ArenaHeight ?? 32f) * 0.4f;
+        Vector3 pos = new Vector3(UnityEngine.Random.Range(-halfW, halfW), UnityEngine.Random.Range(-halfH, halfH), 0f);
         Instantiate(_portalPrefab, pos, Quaternion.identity);
     }
 }

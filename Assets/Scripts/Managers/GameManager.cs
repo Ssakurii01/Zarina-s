@@ -20,6 +20,7 @@ public class GameManager : MonoBehaviour
     private float _inactivityTimer;
     private float _gameOverTimer;
     private bool _hasReceivedFirstInput = false;
+    private bool _gameStarted = false;
 
     public float SessionTimeRemaining => _sessionTimeRemaining;
 
@@ -40,6 +41,7 @@ public class GameManager : MonoBehaviour
     void Start()
     {
         _sessionTimeRemaining = _maxSessionTime;
+        Time.timeScale = 0f;
     }
 
     void OnEnable()
@@ -56,8 +58,24 @@ public class GameManager : MonoBehaviour
 
     void Update()
     {
+        if (!_gameStarted)
+        {
+            if (Input.GetKeyDown(KeyCode.Space))
+            {
+                _gameStarted = true;
+                Time.timeScale = 1f;
+            }
+            return;
+        }
+
         if (_currentState == GameState.GameOver)
         {
+            if (Input.GetKeyDown(KeyCode.Space))
+            {
+                RestartGame();
+                return;
+            }
+
             _gameOverTimer += Time.unscaledDeltaTime;
             if (_gameOverTimer >= _menuTimeoutSeconds)
                 EndSession();
