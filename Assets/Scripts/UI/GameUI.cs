@@ -24,6 +24,9 @@ public class GameUI : MonoBehaviour
     [SerializeField] private Button _restartButton;
     [SerializeField] private TextMeshProUGUI _playAgainText;
 
+    [Header("Player Model (for head shake)")]
+    [SerializeField] private Transform _playerHead;
+
     void OnEnable()
     {
         BombController.OnBombTimerChanged += UpdateBombTimer;
@@ -129,6 +132,14 @@ public class GameUI : MonoBehaviour
 
         _gameOverPanel.SetActive(true);
 
+        // Ensure EventSystem exists for button clicks
+        if (EventSystem.current == null)
+        {
+            var es = new GameObject("EventSystem");
+            es.AddComponent<EventSystem>();
+            es.AddComponent<StandaloneInputModule>();
+        }
+
         if (_winnerText != null)
         {
             string winner = RoundManager.Instance != null ? RoundManager.Instance.WinnerName : "Unknown";
@@ -145,23 +156,85 @@ public class GameUI : MonoBehaviour
             _roundsSurvivedText.fontSize = 24f;
         }
 
-        // Make Play Again text clickable
+        // Make Play Again text a proper clickable button
         if (_playAgainText != null)
         {
             _playAgainText.text = "PLAY AGAIN";
             _playAgainText.fontSize = 28f;
+            _playAgainText.raycastTarget = true;
+
+            // Add Button component if missing
             var button = _playAgainText.GetComponent<Button>();
             if (button == null)
                 button = _playAgainText.gameObject.AddComponent<Button>();
+
+            // Set up color transition so it looks clickable
+            var colors = button.colors;
+            colors.normalColor = Color.white;
+            colors.highlightedColor = Color.yellow;
+            colors.pressedColor = new Color(1f, 0.5f, 0f);
+            button.colors = colors;
+            button.targetGraphic = _playAgainText;
+
             button.onClick.RemoveAllListeners();
             button.onClick.AddListener(OnRestartButton);
 
-            // Make sure it has a raycast target for clicks
-            _playAgainText.raycastTarget = true;
+            // Also select it so keyboard/gamepad works
+            EventSystem.current?.SetSelectedGameObject(_playAgainText.gameObject);
+        }
+        else if (_restartButton != null)
+        {
+            EventSystem.current?.SetSelectedGameObject(_restartButton.gameObject);
         }
 
-        if (_restartButton != null)
-            EventSystem.current.SetSelectedGameObject(_restartButton.gameObject);
+        // Start head shake on player model
+        StartCoroutine(HeadShakeRoutine());
+    }
+
+    private System.Collections.IEnumerator HeadShakeRoutine()
+    {
+        // Find the player object (may be inactive after elimination)
+        GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
+        if (playerObj == null)
+        {
+            // Search inactive objects
+            var allPlayers = Resources.FindObjectsOfTypeAll<PlayerController>();
+            foreach (var p in allPlayers)
+            {
+                playerObj = p.gameObject;
+                break;
+            }
+        }
+
+        if (playerObj == null) yield break;
+
+        // Re-enable the player so the shake is visible, but keep it "dead"
+        playerObj.SetActive(true);
+        var rb = playerObj.GetComponent<Rigidbody>();
+        if (rb != null)
+        {
+            rb.isKinematic = true;
+            rb.linearVelocity = Vector3.zero;
+        }
+
+        Transform head = _playerHead != null ? _playerHead : playerObj.transform;
+
+        // Shake head side-to-side (like saying "no")
+        Quaternion originalRot = head.localRotation;
+        float elapsed = 0f;
+        float shakeDuration = 2f;
+        float shakeSpeed = 12f;
+        float shakeAngle = 25f;
+
+        while (elapsed < shakeDuration)
+        {
+            float angle = Mathf.Sin(elapsed * shakeSpeed) * shakeAngle;
+            head.localRotation = originalRot * Quaternion.Euler(0f, angle, 0f);
+            elapsed += Time.unscaledDeltaTime;
+            yield return null;
+        }
+
+        head.localRotation = originalRot;
     }
 
     public void OnRestartButton()
