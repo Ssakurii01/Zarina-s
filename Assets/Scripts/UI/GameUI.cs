@@ -28,6 +28,10 @@ public class GameUI : MonoBehaviour
     [Header("Player Model (for head shake)")]
     [SerializeField] private Transform _playerHead;
 
+    // Score display (always visible, bottom-right, small)
+    private TextMeshProUGUI _scoreText;
+    private TextMeshProUGUI _highScoreText;
+
     private Canvas _canvas;
 
     void OnEnable()
@@ -60,18 +64,21 @@ public class GameUI : MonoBehaviour
         if (_bombHolderText != null) _bombHolderText.text = "";
         if (_buttonHintsText != null)
             _buttonHintsText.text = "MOVE: A/D  |  JUMP: Space";
+
+        UpdateScoreDisplay();
     }
 
     private void EnsureCanvasSetup()
     {
         if (_canvas == null) return;
 
-        // Fix canvas scale if it's zero
         var rt = _canvas.GetComponent<RectTransform>();
         if (rt != null && rt.localScale == Vector3.zero)
             rt.localScale = Vector3.one;
 
-        // Ensure EventSystem exists
+        // High sort order so UI is always in front of 3D objects
+        _canvas.sortingOrder = 100;
+
         if (EventSystem.current == null)
         {
             var es = new GameObject("EventSystem");
@@ -79,7 +86,6 @@ public class GameUI : MonoBehaviour
             es.AddComponent<StandaloneInputModule>();
         }
 
-        // Ensure GraphicRaycaster
         if (GetComponent<GraphicRaycaster>() == null)
             gameObject.AddComponent<GraphicRaycaster>();
     }
@@ -89,30 +95,37 @@ public class GameUI : MonoBehaviour
         if (_canvas == null) return;
         var canvasRT = _canvas.GetComponent<RectTransform>();
 
-        // Build HUD elements if not assigned
         if (_bombTimerText == null)
-            _bombTimerText = CreateText(canvasRT, "BombTimer", "", 72f, TextAlignmentOptions.Center,
-                new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0, -40), new Vector2(300, 100));
+            _bombTimerText = CreateText(canvasRT, "BombTimer", "", 48f, TextAlignmentOptions.Center,
+                new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0, -30), new Vector2(200, 60));
 
         if (_roundText == null)
-            _roundText = CreateText(canvasRT, "RoundText", "", 28f, TextAlignmentOptions.TopLeft,
-                new Vector2(0, 1f), new Vector2(0, 1f), new Vector2(20, -20), new Vector2(300, 50));
+            _roundText = CreateText(canvasRT, "RoundText", "", 20f, TextAlignmentOptions.TopLeft,
+                new Vector2(0, 1f), new Vector2(0, 1f), new Vector2(15, -10), new Vector2(200, 35));
 
         if (_aliveCountText == null)
-            _aliveCountText = CreateText(canvasRT, "AliveCount", "", 28f, TextAlignmentOptions.TopRight,
-                new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-20, -20), new Vector2(300, 50));
+            _aliveCountText = CreateText(canvasRT, "AliveCount", "", 20f, TextAlignmentOptions.TopRight,
+                new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-15, -10), new Vector2(200, 35));
 
         if (_bombHolderText == null)
-            _bombHolderText = CreateText(canvasRT, "BombHolder", "", 32f, TextAlignmentOptions.Center,
-                new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0, -140), new Vector2(600, 60));
+            _bombHolderText = CreateText(canvasRT, "BombHolder", "", 22f, TextAlignmentOptions.Center,
+                new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0, -90), new Vector2(500, 40));
 
         if (_sessionTimerText == null)
-            _sessionTimerText = CreateText(canvasRT, "SessionTimer", "", 24f, TextAlignmentOptions.TopRight,
-                new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-20, -60), new Vector2(200, 40));
+            _sessionTimerText = CreateText(canvasRT, "SessionTimer", "", 18f, TextAlignmentOptions.TopRight,
+                new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-15, -45), new Vector2(150, 30));
 
         if (_buttonHintsText == null)
-            _buttonHintsText = CreateText(canvasRT, "ButtonHints", "", 20f, TextAlignmentOptions.Bottom,
-                new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0, 30), new Vector2(500, 40));
+            _buttonHintsText = CreateText(canvasRT, "ButtonHints", "", 16f, TextAlignmentOptions.Bottom,
+                new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0, 20), new Vector2(400, 30));
+
+        // Score display - small, bottom-right corner
+        _scoreText = CreateText(canvasRT, "ScoreDisplay", "", 14f, TextAlignmentOptions.BottomRight,
+            new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-15, 50), new Vector2(200, 25));
+
+        _highScoreText = CreateText(canvasRT, "HighScoreDisplay", "", 14f, TextAlignmentOptions.BottomRight,
+            new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-15, 30), new Vector2(200, 25));
+        _highScoreText.color = new Color(1f, 0.85f, 0.4f); // gold
 
         // Build Game Over panel
         if (_gameOverPanel == null)
@@ -121,7 +134,7 @@ public class GameUI : MonoBehaviour
 
     private void BuildGameOverPanel(RectTransform parent)
     {
-        // Dark overlay panel
+        // Dark overlay - renders in front of everything
         var panelObj = new GameObject("GameOverPanel");
         panelObj.transform.SetParent(parent, false);
         var panelRT = panelObj.AddComponent<RectTransform>();
@@ -131,43 +144,42 @@ public class GameUI : MonoBehaviour
         panelRT.offsetMax = Vector2.zero;
 
         var panelImage = panelObj.AddComponent<Image>();
-        panelImage.color = new Color(0, 0, 0, 0.75f);
+        panelImage.color = new Color(0, 0, 0, 0.7f);
 
         _gameOverPanel = panelObj;
 
-        // Winner text
-        _winnerText = CreateText(panelRT, "WinnerText", "", 36f, TextAlignmentOptions.Center,
-            new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 120), new Vector2(600, 80));
+        // "GAME OVER" title - small
+        _winnerText = CreateText(panelRT, "WinnerText", "", 28f, TextAlignmentOptions.Center,
+            new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 60), new Vector2(400, 50));
 
-        // Rounds survived text
-        _roundsSurvivedText = CreateText(panelRT, "RoundsSurvived", "", 24f, TextAlignmentOptions.Center,
-            new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 40), new Vector2(600, 50));
-
-        // Play Again button
+        // Play Again button - centered, clean
         var btnObj = new GameObject("PlayAgainBtn");
         btnObj.transform.SetParent(panelRT, false);
         var btnRT = btnObj.AddComponent<RectTransform>();
         btnRT.anchorMin = new Vector2(0.5f, 0.5f);
         btnRT.anchorMax = new Vector2(0.5f, 0.5f);
-        btnRT.anchoredPosition = new Vector2(0, -60);
-        btnRT.sizeDelta = new Vector2(300, 70);
+        btnRT.anchoredPosition = new Vector2(0, -20);
+        btnRT.sizeDelta = new Vector2(220, 55);
 
         var btnImage = btnObj.AddComponent<Image>();
-        btnImage.color = new Color(0.2f, 0.7f, 0.2f, 1f);
+        btnImage.color = new Color(0.2f, 0.65f, 0.2f, 1f);
 
         var btn = btnObj.AddComponent<Button>();
         var btnColors = btn.colors;
-        btnColors.normalColor = new Color(0.2f, 0.7f, 0.2f, 1f);
-        btnColors.highlightedColor = new Color(0.3f, 0.9f, 0.3f, 1f);
+        btnColors.normalColor = new Color(0.2f, 0.65f, 0.2f, 1f);
+        btnColors.highlightedColor = new Color(0.3f, 0.85f, 0.3f, 1f);
         btnColors.pressedColor = new Color(0.1f, 0.5f, 0.1f, 1f);
         btn.colors = btnColors;
         btn.onClick.AddListener(OnRestartButton);
         _restartButton = btn;
 
-        _playAgainText = CreateText(btnRT, "PlayAgainText", "PLAY AGAIN", 28f, TextAlignmentOptions.Center,
+        _playAgainText = CreateText(btnRT, "PlayAgainText", "PLAY AGAIN", 22f, TextAlignmentOptions.Center,
             new Vector2(0f, 0f), new Vector2(1f, 1f), Vector2.zero, Vector2.zero);
         _playAgainText.color = Color.white;
-        _playAgainText.raycastTarget = false; // let button handle clicks
+        _playAgainText.raycastTarget = false;
+
+        // No share button, no big scores on game over panel
+        // Scores stay small in bottom-right corner (always visible from HUD)
 
         _gameOverPanel.SetActive(false);
     }
@@ -193,6 +205,16 @@ public class GameUI : MonoBehaviour
         return tmp;
     }
 
+    private void UpdateScoreDisplay()
+    {
+        if (_scoreText != null && ScoreManager.Instance != null)
+            _scoreText.text = $"Score: {ScoreManager.Instance.RoundsSurvived}";
+
+        int highScore = PlayerPrefs.GetInt("HighScore", 0);
+        if (_highScoreText != null)
+            _highScoreText.text = $"Best: {highScore}";
+    }
+
     private void UpdateBombTimer(float time)
     {
         if (_bombTimerText == null) return;
@@ -204,12 +226,12 @@ public class GameUI : MonoBehaviour
         {
             float flash = (Mathf.Sin(Time.time * 10f) + 1f) * 0.5f;
             _bombTimerText.color = Color.Lerp(Color.red, Color.white, flash);
-            _bombTimerText.fontSize = Mathf.Lerp(72f, 90f, flash);
+            _bombTimerText.fontSize = Mathf.Lerp(48f, 60f, flash);
         }
         else
         {
             _bombTimerText.color = Color.white;
-            _bombTimerText.fontSize = 72f;
+            _bombTimerText.fontSize = 48f;
         }
     }
 
@@ -239,6 +261,8 @@ public class GameUI : MonoBehaviour
 
         if (_bombHolderText != null)
             _bombHolderText.text = "";
+
+        UpdateScoreDisplay();
     }
 
     private void UpdateAliveCount(int count)
@@ -267,6 +291,20 @@ public class GameUI : MonoBehaviour
     {
         if (_gameOverPanel == null) return;
 
+        // Save high score
+        if (ScoreManager.Instance != null)
+        {
+            int current = ScoreManager.Instance.RoundsSurvived;
+            int best = PlayerPrefs.GetInt("HighScore", 0);
+            if (current > best)
+            {
+                PlayerPrefs.SetInt("HighScore", current);
+                PlayerPrefs.Save();
+            }
+        }
+
+        UpdateScoreDisplay();
+
         _gameOverPanel.SetActive(true);
 
         if (_winnerText != null)
@@ -275,11 +313,8 @@ public class GameUI : MonoBehaviour
             if (winner == "You")
                 _winnerText.text = "YOU WIN!";
             else
-                _winnerText.text = $"{winner} WINS!";
+                _winnerText.text = $"GAME OVER";
         }
-
-        if (_roundsSurvivedText != null && ScoreManager.Instance != null)
-            _roundsSurvivedText.text = $"Rounds Survived: {ScoreManager.Instance.RoundsSurvived}";
 
         if (_restartButton != null)
             EventSystem.current?.SetSelectedGameObject(_restartButton.gameObject);
