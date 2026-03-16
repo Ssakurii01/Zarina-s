@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using TMPro;
+using System.Collections;
 
 public class GameUI : MonoBehaviour
 {
@@ -27,6 +28,8 @@ public class GameUI : MonoBehaviour
     [Header("Player Model (for head shake)")]
     [SerializeField] private Transform _playerHead;
 
+    private Canvas _canvas;
+
     void OnEnable()
     {
         BombController.OnBombTimerChanged += UpdateBombTimer;
@@ -49,11 +52,145 @@ public class GameUI : MonoBehaviour
 
     void Start()
     {
+        _canvas = GetComponent<Canvas>();
+        EnsureCanvasSetup();
+        BuildHUDIfNeeded();
+
         if (_gameOverPanel != null) _gameOverPanel.SetActive(false);
         if (_bombHolderText != null) _bombHolderText.text = "";
-
         if (_buttonHintsText != null)
             _buttonHintsText.text = "MOVE: A/D  |  JUMP: Space";
+    }
+
+    private void EnsureCanvasSetup()
+    {
+        if (_canvas == null) return;
+
+        // Fix canvas scale if it's zero
+        var rt = _canvas.GetComponent<RectTransform>();
+        if (rt != null && rt.localScale == Vector3.zero)
+            rt.localScale = Vector3.one;
+
+        // Ensure EventSystem exists
+        if (EventSystem.current == null)
+        {
+            var es = new GameObject("EventSystem");
+            es.AddComponent<EventSystem>();
+            es.AddComponent<StandaloneInputModule>();
+        }
+
+        // Ensure GraphicRaycaster
+        if (GetComponent<GraphicRaycaster>() == null)
+            gameObject.AddComponent<GraphicRaycaster>();
+    }
+
+    private void BuildHUDIfNeeded()
+    {
+        if (_canvas == null) return;
+        var canvasRT = _canvas.GetComponent<RectTransform>();
+
+        // Build HUD elements if not assigned
+        if (_bombTimerText == null)
+            _bombTimerText = CreateText(canvasRT, "BombTimer", "", 72f, TextAlignmentOptions.Center,
+                new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0, -40), new Vector2(300, 100));
+
+        if (_roundText == null)
+            _roundText = CreateText(canvasRT, "RoundText", "", 28f, TextAlignmentOptions.TopLeft,
+                new Vector2(0, 1f), new Vector2(0, 1f), new Vector2(20, -20), new Vector2(300, 50));
+
+        if (_aliveCountText == null)
+            _aliveCountText = CreateText(canvasRT, "AliveCount", "", 28f, TextAlignmentOptions.TopRight,
+                new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-20, -20), new Vector2(300, 50));
+
+        if (_bombHolderText == null)
+            _bombHolderText = CreateText(canvasRT, "BombHolder", "", 32f, TextAlignmentOptions.Center,
+                new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0, -140), new Vector2(600, 60));
+
+        if (_sessionTimerText == null)
+            _sessionTimerText = CreateText(canvasRT, "SessionTimer", "", 24f, TextAlignmentOptions.TopRight,
+                new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-20, -60), new Vector2(200, 40));
+
+        if (_buttonHintsText == null)
+            _buttonHintsText = CreateText(canvasRT, "ButtonHints", "", 20f, TextAlignmentOptions.Bottom,
+                new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0, 30), new Vector2(500, 40));
+
+        // Build Game Over panel
+        if (_gameOverPanel == null)
+            BuildGameOverPanel(canvasRT);
+    }
+
+    private void BuildGameOverPanel(RectTransform parent)
+    {
+        // Dark overlay panel
+        var panelObj = new GameObject("GameOverPanel");
+        panelObj.transform.SetParent(parent, false);
+        var panelRT = panelObj.AddComponent<RectTransform>();
+        panelRT.anchorMin = Vector2.zero;
+        panelRT.anchorMax = Vector2.one;
+        panelRT.offsetMin = Vector2.zero;
+        panelRT.offsetMax = Vector2.zero;
+
+        var panelImage = panelObj.AddComponent<Image>();
+        panelImage.color = new Color(0, 0, 0, 0.75f);
+
+        _gameOverPanel = panelObj;
+
+        // Winner text
+        _winnerText = CreateText(panelRT, "WinnerText", "", 36f, TextAlignmentOptions.Center,
+            new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 120), new Vector2(600, 80));
+
+        // Rounds survived text
+        _roundsSurvivedText = CreateText(panelRT, "RoundsSurvived", "", 24f, TextAlignmentOptions.Center,
+            new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 40), new Vector2(600, 50));
+
+        // Play Again button
+        var btnObj = new GameObject("PlayAgainBtn");
+        btnObj.transform.SetParent(panelRT, false);
+        var btnRT = btnObj.AddComponent<RectTransform>();
+        btnRT.anchorMin = new Vector2(0.5f, 0.5f);
+        btnRT.anchorMax = new Vector2(0.5f, 0.5f);
+        btnRT.anchoredPosition = new Vector2(0, -60);
+        btnRT.sizeDelta = new Vector2(300, 70);
+
+        var btnImage = btnObj.AddComponent<Image>();
+        btnImage.color = new Color(0.2f, 0.7f, 0.2f, 1f);
+
+        var btn = btnObj.AddComponent<Button>();
+        var btnColors = btn.colors;
+        btnColors.normalColor = new Color(0.2f, 0.7f, 0.2f, 1f);
+        btnColors.highlightedColor = new Color(0.3f, 0.9f, 0.3f, 1f);
+        btnColors.pressedColor = new Color(0.1f, 0.5f, 0.1f, 1f);
+        btn.colors = btnColors;
+        btn.onClick.AddListener(OnRestartButton);
+        _restartButton = btn;
+
+        _playAgainText = CreateText(btnRT, "PlayAgainText", "PLAY AGAIN", 28f, TextAlignmentOptions.Center,
+            new Vector2(0f, 0f), new Vector2(1f, 1f), Vector2.zero, Vector2.zero);
+        _playAgainText.color = Color.white;
+        _playAgainText.raycastTarget = false; // let button handle clicks
+
+        _gameOverPanel.SetActive(false);
+    }
+
+    private TextMeshProUGUI CreateText(RectTransform parent, string name, string text, float fontSize,
+        TextAlignmentOptions alignment, Vector2 anchorMin, Vector2 anchorMax, Vector2 anchoredPos, Vector2 sizeDelta)
+    {
+        var obj = new GameObject(name);
+        obj.transform.SetParent(parent, false);
+        var rt = obj.AddComponent<RectTransform>();
+        rt.anchorMin = anchorMin;
+        rt.anchorMax = anchorMax;
+        rt.anchoredPosition = anchoredPos;
+        rt.sizeDelta = sizeDelta;
+
+        var tmp = obj.AddComponent<TextMeshProUGUI>();
+        tmp.text = text;
+        tmp.fontSize = fontSize;
+        tmp.alignment = alignment;
+        tmp.color = Color.white;
+        tmp.raycastTarget = false;
+
+        return tmp;
     }
 
     private void UpdateBombTimer(float time)
@@ -132,14 +269,6 @@ public class GameUI : MonoBehaviour
 
         _gameOverPanel.SetActive(true);
 
-        // Ensure EventSystem exists for button clicks
-        if (EventSystem.current == null)
-        {
-            var es = new GameObject("EventSystem");
-            es.AddComponent<EventSystem>();
-            es.AddComponent<StandaloneInputModule>();
-        }
-
         if (_winnerText != null)
         {
             string winner = RoundManager.Instance != null ? RoundManager.Instance.WinnerName : "Unknown";
@@ -147,57 +276,22 @@ public class GameUI : MonoBehaviour
                 _winnerText.text = "YOU WIN!";
             else
                 _winnerText.text = $"{winner} WINS!";
-            _winnerText.fontSize = 36f;
         }
 
         if (_roundsSurvivedText != null && ScoreManager.Instance != null)
-        {
             _roundsSurvivedText.text = $"Rounds Survived: {ScoreManager.Instance.RoundsSurvived}";
-            _roundsSurvivedText.fontSize = 24f;
-        }
 
-        // Make Play Again text a proper clickable button
-        if (_playAgainText != null)
-        {
-            _playAgainText.text = "PLAY AGAIN";
-            _playAgainText.fontSize = 28f;
-            _playAgainText.raycastTarget = true;
-
-            // Add Button component if missing
-            var button = _playAgainText.GetComponent<Button>();
-            if (button == null)
-                button = _playAgainText.gameObject.AddComponent<Button>();
-
-            // Set up color transition so it looks clickable
-            var colors = button.colors;
-            colors.normalColor = Color.white;
-            colors.highlightedColor = Color.yellow;
-            colors.pressedColor = new Color(1f, 0.5f, 0f);
-            button.colors = colors;
-            button.targetGraphic = _playAgainText;
-
-            button.onClick.RemoveAllListeners();
-            button.onClick.AddListener(OnRestartButton);
-
-            // Also select it so keyboard/gamepad works
-            EventSystem.current?.SetSelectedGameObject(_playAgainText.gameObject);
-        }
-        else if (_restartButton != null)
-        {
+        if (_restartButton != null)
             EventSystem.current?.SetSelectedGameObject(_restartButton.gameObject);
-        }
 
-        // Start head shake on player model
         StartCoroutine(HeadShakeRoutine());
     }
 
-    private System.Collections.IEnumerator HeadShakeRoutine()
+    private IEnumerator HeadShakeRoutine()
     {
-        // Find the player object (may be inactive after elimination)
         GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
         if (playerObj == null)
         {
-            // Search inactive objects
             var allPlayers = Resources.FindObjectsOfTypeAll<PlayerController>();
             foreach (var p in allPlayers)
             {
@@ -208,7 +302,6 @@ public class GameUI : MonoBehaviour
 
         if (playerObj == null) yield break;
 
-        // Re-enable the player so the shake is visible, but keep it "dead"
         playerObj.SetActive(true);
         var rb = playerObj.GetComponent<Rigidbody>();
         if (rb != null)
@@ -219,7 +312,6 @@ public class GameUI : MonoBehaviour
 
         Transform head = _playerHead != null ? _playerHead : playerObj.transform;
 
-        // Shake head side-to-side (like saying "no")
         Quaternion originalRot = head.localRotation;
         float elapsed = 0f;
         float shakeDuration = 2f;

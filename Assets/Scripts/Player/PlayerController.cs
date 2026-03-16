@@ -19,6 +19,10 @@ public class PlayerController : MonoBehaviour
 
     void Start()
     {
+        // Force values at runtime (overrides scene-serialized values)
+        _moveSpeed = 15f;
+        _jumpForce = 5.5f;
+
         _rb = GetComponent<Rigidbody>();
 
         _rb.useGravity = true;
