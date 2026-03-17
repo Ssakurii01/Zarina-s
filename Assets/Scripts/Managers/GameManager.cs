@@ -30,12 +30,32 @@ public class GameManager : MonoBehaviour
     public delegate void TimerEvent(float timeRemaining);
     public static event TimerEvent OnTimerChanged;
 
+    public static event System.Action OnGameStarted;
+
     void Awake()
     {
         if (Instance == null) Instance = this;
         else Destroy(gameObject);
 
         Application.targetFrameRate = -1;
+
+        // Auto-create SFXManager if not in scene
+        if (FindFirstObjectByType<SFXManager>() == null)
+        {
+            var sfxObj = new GameObject("SFXManager");
+            sfxObj.AddComponent<SFXManager>();
+        }
+
+        // Auto-attach DynamicCamera to main camera
+        if (Camera.main != null && Camera.main.GetComponent<DynamicCamera>() == null)
+            Camera.main.gameObject.AddComponent<DynamicCamera>();
+
+        // Auto-create PowerUpSpawner
+        if (FindFirstObjectByType<PowerUpSpawner>() == null)
+        {
+            var spawnerObj = new GameObject("PowerUpSpawner");
+            spawnerObj.AddComponent<PowerUpSpawner>();
+        }
     }
 
     void Start()
@@ -64,6 +84,7 @@ public class GameManager : MonoBehaviour
             {
                 _gameStarted = true;
                 Time.timeScale = 1f;
+                OnGameStarted?.Invoke();
             }
             return;
         }
@@ -128,6 +149,7 @@ public class GameManager : MonoBehaviour
         _currentState = GameState.GameOver;
         _gameOverTimer = 0f;
         Time.timeScale = 1f;
+        SFXManager.Instance?.PlayGameOver();
         OnGameStateChanged?.Invoke(_currentState);
     }
 

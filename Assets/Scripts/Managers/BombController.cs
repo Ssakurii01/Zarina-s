@@ -18,6 +18,9 @@ public class BombController : MonoBehaviour
     private Renderer _renderer;
     private Color _baseColor = Color.yellow;
 
+    private Renderer _holderRenderer;
+    private Color _holderOriginalColor;
+
     public GameObject CurrentHolder => _currentHolder;
     public float Timer => _timer;
     public float RoundTime => _roundTime;
@@ -47,12 +50,16 @@ public class BombController : MonoBehaviour
         _timer -= Time.deltaTime;
         OnBombTimerChanged?.Invoke(_timer);
 
+        // Tick sound (gets faster as timer decreases)
+        SFXManager.Instance?.PlayBombTick(_timer / _roundTime);
+
         // Transfer cooldown
         if (_transferCooldownTimer > 0f)
             _transferCooldownTimer -= Time.deltaTime;
 
         // Visual: flash faster as timer decreases
         UpdateVisual();
+        UpdateHolderGlow();
 
         // Check for nearby characters to transfer
         CheckTransfer();
@@ -78,6 +85,7 @@ public class BombController : MonoBehaviour
             var player = hit.GetComponent<PlayerController>();
             if (player != null && player.IsAlive)
             {
+                if (player.ConsumeShield()) continue; // shield blocks transfer
                 TransferTo(hit.gameObject);
                 return;
             }
@@ -85,6 +93,7 @@ public class BombController : MonoBehaviour
             var bot = hit.GetComponent<BotController>();
             if (bot != null && bot.IsAlive)
             {
+                if (bot.ConsumeShield()) continue; // shield blocks transfer
                 TransferTo(hit.gameObject);
                 return;
             }
@@ -93,9 +102,36 @@ public class BombController : MonoBehaviour
 
     private void TransferTo(GameObject newHolder)
     {
+        ResetHolderGlow();
         _currentHolder = newHolder;
+        ApplyHolderGlow();
         _transferCooldownTimer = _transferCooldown;
+        SFXManager.Instance?.PlayBombTransfer();
         OnBombTransferred?.Invoke(_currentHolder);
+    }
+
+    private void ApplyHolderGlow()
+    {
+        if (_currentHolder == null) return;
+        _holderRenderer = _currentHolder.GetComponent<Renderer>();
+        if (_holderRenderer != null)
+            _holderOriginalColor = _holderRenderer.material.color;
+    }
+
+    private void ResetHolderGlow()
+    {
+        if (_holderRenderer != null)
+        {
+            _holderRenderer.material.color = _holderOriginalColor;
+            _holderRenderer = null;
+        }
+    }
+
+    private void UpdateHolderGlow()
+    {
+        if (_holderRenderer == null) return;
+        float pulse = (Mathf.Sin(Time.time * 8f) + 1f) * 0.5f;
+        _holderRenderer.material.color = Color.Lerp(_holderOriginalColor, new Color(1f, 0.3f, 0f), pulse * 0.6f);
     }
 
     private void UpdateVisual()
@@ -108,10 +144,13 @@ public class BombController : MonoBehaviour
         _renderer.material.color = Color.Lerp(_baseColor, Color.red, t);
     }
 
-    public void AssignBomb(GameObject holder)
+    public void AssignBomb(GameObject holder, int round = 1)
     {
+        ResetHolderGlow();
         _currentHolder = holder;
-        _timer = _roundTime;
+        ApplyHolderGlow();
+        // Difficulty: timer decreases each round (15s -> min 5s)
+        _timer = Mathf.Max(5f, _roundTime - (round - 1) * 1f);
         _transferCooldownTimer = _transferCooldown;
         _isActive = true;
         gameObject.SetActive(true);
@@ -123,9 +162,17 @@ public class BombController : MonoBehaviour
     private void Explode()
     {
         _isActive = false;
+        ResetHolderGlow();
         GameObject victim = _currentHolder;
 
+        SFXManager.Instance?.PlayBombExplode();
         CameraShake.Instance?.Shake();
+        ExplosionEffect.SpawnAt(transform.position);
+
+        // Screen flash
+        var gameUI = Object.FindFirstObjectByType<GameUI>();
+        if (gameUI != null) gameUI.TriggerScreenFlash();
+
         OnBombExploded?.Invoke(victim);
 
         // Eliminate the holder

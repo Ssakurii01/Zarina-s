@@ -1,5 +1,6 @@
 using UnityEngine;
 using System;
+using System.Collections;
 
 public class PlayerController : MonoBehaviour
 {
@@ -12,8 +13,12 @@ public class PlayerController : MonoBehaviour
 
     private Rigidbody _rb;
     private bool _isAlive = true;
+    private bool _hasShield;
+    private float _speedMultiplier = 1f;
+    private float _speedBoostTimer;
 
     public bool IsAlive => _isAlive;
+    public bool HasShield => _hasShield;
 
     public static event Action OnPlayerEliminated;
 
@@ -36,12 +41,33 @@ public class PlayerController : MonoBehaviour
 
         if (InputManager.Instance?.Input != null)
             InputManager.Instance.Input.OnJumpPressed += HandleJump;
+
+        // Add trail renderer for visual polish
+        if (GetComponent<TrailRenderer>() == null)
+        {
+            var trail = gameObject.AddComponent<TrailRenderer>();
+            trail.time = 0.15f;
+            trail.startWidth = 0.15f;
+            trail.endWidth = 0f;
+            trail.startColor = new Color(1f, 1f, 1f, 0.4f);
+            trail.endColor = new Color(1f, 1f, 1f, 0f);
+            trail.material = new Material(Shader.Find("Sprites/Default"));
+        }
     }
 
     void OnDestroy()
     {
         if (InputManager.Instance?.Input != null)
             InputManager.Instance.Input.OnJumpPressed -= HandleJump;
+    }
+
+    void Update()
+    {
+        if (_speedBoostTimer > 0f)
+        {
+            _speedBoostTimer -= Time.deltaTime;
+            if (_speedBoostTimer <= 0f) _speedMultiplier = 1f;
+        }
     }
 
     void FixedUpdate()
@@ -53,7 +79,7 @@ public class PlayerController : MonoBehaviour
     private void HandleMovement()
     {
         float horizontal = InputManager.Instance?.Input?.MoveHorizontal ?? 0f;
-        _rb.linearVelocity = new Vector3(horizontal * _moveSpeed, _rb.linearVelocity.y, 0f);
+        _rb.linearVelocity = new Vector3(horizontal * _moveSpeed * _speedMultiplier, _rb.linearVelocity.y, 0f);
     }
 
     private void HandleJump()
@@ -63,6 +89,7 @@ public class PlayerController : MonoBehaviour
         {
             _rb.linearVelocity = new Vector3(_rb.linearVelocity.x, 0f, 0f);
             _rb.AddForce(Vector3.up * _jumpForce, ForceMode.Impulse);
+            SFXManager.Instance?.PlayJump();
         }
     }
 
@@ -77,7 +104,26 @@ public class PlayerController : MonoBehaviour
         _isAlive = false;
         CameraShake.Instance?.Shake();
         OnPlayerEliminated?.Invoke();
+        StartCoroutine(DeathAnimation());
+    }
+
+    private IEnumerator DeathAnimation()
+    {
+        float elapsed = 0f;
+        float duration = 0.5f;
+        Vector3 startScale = transform.localScale;
+
+        while (elapsed < duration)
+        {
+            float t = elapsed / duration;
+            transform.localScale = startScale * Mathf.Lerp(1f, 0f, t);
+            transform.Rotate(0f, 720f * Time.deltaTime, 0f);
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+
         gameObject.SetActive(false);
+        transform.localScale = startScale;
     }
 
     public void ApplyLaunch(float force)
@@ -92,5 +138,24 @@ public class PlayerController : MonoBehaviour
         if (!_isAlive) return;
         transform.position = pos;
         _rb.linearVelocity = Vector3.zero;
+    }
+
+    // Power-up methods
+    public void ApplySpeedBoost(float duration, float multiplier)
+    {
+        _speedMultiplier = multiplier;
+        _speedBoostTimer = duration;
+    }
+
+    public void ActivateShield()
+    {
+        _hasShield = true;
+    }
+
+    public bool ConsumeShield()
+    {
+        if (!_hasShield) return false;
+        _hasShield = false;
+        return true;
     }
 }

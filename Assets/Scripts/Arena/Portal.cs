@@ -14,6 +14,15 @@ public class Portal : MonoBehaviour
 
     void Start()
     {
+        // Use actual arena bounds instead of hardcoded values
+        if (ArenaSetup.Instance != null)
+        {
+            _xMin = -ArenaSetup.Instance.ArenaWidth * 0.35f;
+            _xMax = ArenaSetup.Instance.ArenaWidth * 0.35f;
+            _yMin = -ArenaSetup.Instance.ArenaHeight * 0.3f;
+            _yMax = ArenaSetup.Instance.ArenaHeight * 0.3f;
+        }
+
         Destroy(gameObject, _lifetime);
     }
 
@@ -26,6 +35,8 @@ public class Portal : MonoBehaviour
     private void OnTriggerEnter(Collider other)
     {
         if (_cooldownTimer > 0f) return;
+
+        SFXManager.Instance?.PlayPortalTeleport();
 
         Vector3 randomPos = new Vector3(
             Random.Range(_xMin, _xMax),

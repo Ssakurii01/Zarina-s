@@ -6,33 +6,50 @@ using System.Collections;
 
 public class GameUI : MonoBehaviour
 {
-    [Header("HUD")]
-    [SerializeField] private TextMeshProUGUI _bombTimerText;
-    [SerializeField] private TextMeshProUGUI _aliveCountText;
-    [SerializeField] private TextMeshProUGUI _roundText;
-    [SerializeField] private TextMeshProUGUI _bombHolderText;
-
-    [Header("Session Timer")]
-    [SerializeField] private TextMeshProUGUI _sessionTimerText;
-
-    [Header("Button Hints")]
-    [SerializeField] private TextMeshProUGUI _buttonHintsText;
-
-    [Header("Game Over Panel")]
-    [SerializeField] private GameObject _gameOverPanel;
-    [SerializeField] private TextMeshProUGUI _winnerText;
-    [SerializeField] private TextMeshProUGUI _roundsSurvivedText;
-    [SerializeField] private Button _restartButton;
-    [SerializeField] private TextMeshProUGUI _playAgainText;
-
     [Header("Player Model (for head shake)")]
     [SerializeField] private Transform _playerHead;
 
-    // Score display (always visible, bottom-right, small)
+    // All UI is built from code - no scene references needed
+    private Canvas _canvas;
+    private RectTransform _canvasRT;
+
+    // HUD
+    private TextMeshProUGUI _bombTimerText;
+    private TextMeshProUGUI _aliveCountText;
+    private TextMeshProUGUI _roundText;
+    private TextMeshProUGUI _bombHolderText;
+    private TextMeshProUGUI _sessionTimerText;
+    private TextMeshProUGUI _buttonHintsText;
     private TextMeshProUGUI _scoreText;
     private TextMeshProUGUI _highScoreText;
 
-    private Canvas _canvas;
+    // Start screen
+    private GameObject _startPanel;
+    private TextMeshProUGUI _startPressText;
+
+    // Game over
+    private GameObject _gameOverPanel;
+    private TextMeshProUGUI _winnerText;
+    private Button _restartButton;
+    private TextMeshProUGUI _playAgainText;
+
+    // Round announcement
+    private TextMeshProUGUI _roundAnnounceText;
+
+    // Score popup
+    private TextMeshProUGUI _scorePopupText;
+
+    // Proximity warning (red vignette)
+    private Image _vignetteImage;
+
+    // Bomb arrow indicator
+    private RectTransform _bombArrowRT;
+    private Image _bombArrowImage;
+
+    // Screen flash
+    private Image _screenFlashImage;
+
+    private GameObject _playerObj;
 
     void OnEnable()
     {
@@ -42,6 +59,7 @@ public class GameUI : MonoBehaviour
         RoundManager.OnAliveCountChanged += UpdateAliveCount;
         GameManager.OnGameStateChanged += HandleGameState;
         GameManager.OnTimerChanged += UpdateSessionTimer;
+        GameManager.OnGameStarted += HideStartScreen;
     }
 
     void OnDisable()
@@ -52,32 +70,58 @@ public class GameUI : MonoBehaviour
         RoundManager.OnAliveCountChanged -= UpdateAliveCount;
         GameManager.OnGameStateChanged -= HandleGameState;
         GameManager.OnTimerChanged -= UpdateSessionTimer;
+        GameManager.OnGameStarted -= HideStartScreen;
     }
 
     void Start()
     {
-        _canvas = GetComponent<Canvas>();
-        EnsureCanvasSetup();
-        BuildHUDIfNeeded();
+        SetupCanvas();
+        DestroyExistingChildren();
+        BuildAllUI();
 
-        if (_gameOverPanel != null) _gameOverPanel.SetActive(false);
         if (_bombHolderText != null) _bombHolderText.text = "";
-        if (_buttonHintsText != null)
-            _buttonHintsText.text = "MOVE: A/D  |  JUMP: Space";
+        if (_gameOverPanel != null) _gameOverPanel.SetActive(false);
+
+        _playerObj = GameObject.FindGameObjectWithTag("Player");
 
         UpdateScoreDisplay();
     }
 
-    private void EnsureCanvasSetup()
+    void Update()
     {
-        if (_canvas == null) return;
+        UpdateProximityWarning();
+        UpdateBombArrow();
 
-        var rt = _canvas.GetComponent<RectTransform>();
-        if (rt != null && rt.localScale == Vector3.zero)
+        // Pulse the "press space" text
+        if (_startPressText != null && _startPanel != null && _startPanel.activeSelf)
+        {
+            float alpha = (Mathf.Sin(Time.unscaledTime * 3f) + 1f) * 0.5f;
+            _startPressText.alpha = Mathf.Lerp(0.3f, 1f, alpha);
+        }
+    }
+
+    private void SetupCanvas()
+    {
+        _canvas = GetComponent<Canvas>();
+        if (_canvas == null)
+            _canvas = gameObject.AddComponent<Canvas>();
+
+        _canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        _canvas.sortingOrder = 100;
+
+        var rt = GetComponent<RectTransform>();
+        if (rt != null)
             rt.localScale = Vector3.one;
 
-        // High sort order so UI is always in front of 3D objects
-        _canvas.sortingOrder = 100;
+        var scaler = GetComponent<CanvasScaler>();
+        if (scaler == null)
+            scaler = gameObject.AddComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1080, 1920);
+        scaler.matchWidthOrHeight = 0.5f;
+
+        if (GetComponent<GraphicRaycaster>() == null)
+            gameObject.AddComponent<GraphicRaycaster>();
 
         if (EventSystem.current == null)
         {
@@ -86,57 +130,294 @@ public class GameUI : MonoBehaviour
             es.AddComponent<StandaloneInputModule>();
         }
 
-        if (GetComponent<GraphicRaycaster>() == null)
-            gameObject.AddComponent<GraphicRaycaster>();
+        _canvasRT = _canvas.GetComponent<RectTransform>();
     }
 
-    private void BuildHUDIfNeeded()
+    private void DestroyExistingChildren()
     {
-        if (_canvas == null) return;
-        var canvasRT = _canvas.GetComponent<RectTransform>();
+        for (int i = transform.childCount - 1; i >= 0; i--)
+            Destroy(transform.GetChild(i).gameObject);
+    }
 
-        if (_bombTimerText == null)
-            _bombTimerText = CreateText(canvasRT, "BombTimer", "", 48f, TextAlignmentOptions.Center,
-                new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0, -30), new Vector2(200, 60));
+    private void BuildAllUI()
+    {
+        // --- HUD ---
+        _bombTimerText = CreateText("BombTimer", "", 48f, TextAlignmentOptions.Center,
+            new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0, -30), new Vector2(200, 60));
 
-        if (_roundText == null)
-            _roundText = CreateText(canvasRT, "RoundText", "", 20f, TextAlignmentOptions.TopLeft,
-                new Vector2(0, 1f), new Vector2(0, 1f), new Vector2(15, -10), new Vector2(200, 35));
+        _roundText = CreateText("RoundText", "", 20f, TextAlignmentOptions.TopLeft,
+            new Vector2(0, 1f), new Vector2(0, 1f), new Vector2(15, -10), new Vector2(200, 35));
 
-        if (_aliveCountText == null)
-            _aliveCountText = CreateText(canvasRT, "AliveCount", "", 20f, TextAlignmentOptions.TopRight,
-                new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-15, -10), new Vector2(200, 35));
+        _aliveCountText = CreateText("AliveCount", "", 20f, TextAlignmentOptions.TopRight,
+            new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-15, -10), new Vector2(200, 35));
 
-        if (_bombHolderText == null)
-            _bombHolderText = CreateText(canvasRT, "BombHolder", "", 22f, TextAlignmentOptions.Center,
-                new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0, -90), new Vector2(500, 40));
+        _bombHolderText = CreateText("BombHolder", "", 22f, TextAlignmentOptions.Center,
+            new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0, -90), new Vector2(500, 40));
 
-        if (_sessionTimerText == null)
-            _sessionTimerText = CreateText(canvasRT, "SessionTimer", "", 18f, TextAlignmentOptions.TopRight,
-                new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-15, -45), new Vector2(150, 30));
+        _sessionTimerText = CreateText("SessionTimer", "", 18f, TextAlignmentOptions.TopRight,
+            new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-15, -45), new Vector2(150, 30));
 
-        if (_buttonHintsText == null)
-            _buttonHintsText = CreateText(canvasRT, "ButtonHints", "", 16f, TextAlignmentOptions.Bottom,
-                new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0, 20), new Vector2(400, 30));
+        _buttonHintsText = CreateText("ButtonHints", "MOVE: A/D  |  JUMP: Space", 16f, TextAlignmentOptions.Bottom,
+            new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0, 20), new Vector2(400, 30));
 
-        // Score display - small, bottom-right corner
-        _scoreText = CreateText(canvasRT, "ScoreDisplay", "", 14f, TextAlignmentOptions.BottomRight,
+        // Score display - small, bottom-right
+        _scoreText = CreateText("ScoreDisplay", "", 14f, TextAlignmentOptions.BottomRight,
             new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-15, 50), new Vector2(200, 25));
 
-        _highScoreText = CreateText(canvasRT, "HighScoreDisplay", "", 14f, TextAlignmentOptions.BottomRight,
+        _highScoreText = CreateText("HighScoreDisplay", "", 14f, TextAlignmentOptions.BottomRight,
             new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-15, 30), new Vector2(200, 25));
-        _highScoreText.color = new Color(1f, 0.85f, 0.4f); // gold
+        _highScoreText.color = new Color(1f, 0.85f, 0.4f);
 
-        // Build Game Over panel
-        if (_gameOverPanel == null)
-            BuildGameOverPanel(canvasRT);
+        // --- Round announcement (hidden by default) ---
+        _roundAnnounceText = CreateText("RoundAnnounce", "", 60f, TextAlignmentOptions.Center,
+            new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(500, 100));
+        _roundAnnounceText.gameObject.SetActive(false);
+
+        // --- Score popup (hidden by default) ---
+        _scorePopupText = CreateText("ScorePopup", "", 24f, TextAlignmentOptions.Center,
+            new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-80, 80), new Vector2(100, 40));
+        _scorePopupText.color = Color.green;
+        _scorePopupText.gameObject.SetActive(false);
+
+        // --- Proximity vignette ---
+        BuildVignette();
+
+        // --- Bomb arrow indicator ---
+        BuildBombArrow();
+
+        // --- Screen flash overlay ---
+        BuildScreenFlash();
+
+        // --- Game Over Panel ---
+        BuildGameOverPanel();
+
+        // --- Start Screen (on top of everything) ---
+        BuildStartScreen();
     }
 
-    private void BuildGameOverPanel(RectTransform parent)
+    // ======================== START SCREEN ========================
+
+    private void BuildStartScreen()
     {
-        // Dark overlay - renders in front of everything
+        var panelObj = new GameObject("StartPanel");
+        panelObj.transform.SetParent(_canvasRT, false);
+        var panelRT = panelObj.AddComponent<RectTransform>();
+        panelRT.anchorMin = Vector2.zero;
+        panelRT.anchorMax = Vector2.one;
+        panelRT.offsetMin = Vector2.zero;
+        panelRT.offsetMax = Vector2.zero;
+
+        var bg = panelObj.AddComponent<Image>();
+        bg.color = new Color(0.05f, 0.02f, 0.1f, 0.9f);
+
+        _startPanel = panelObj;
+
+        // Title
+        var title = CreateText("TitleText", "FLUXFURY", 72f, TextAlignmentOptions.Center,
+            new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 100), new Vector2(600, 120),
+            panelRT);
+        title.color = new Color(1f, 0.4f, 0.1f);
+
+        // Subtitle
+        CreateText("SubtitleText", "BOMB TAG ARENA", 24f, TextAlignmentOptions.Center,
+            new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 40), new Vector2(400, 40),
+            panelRT).color = new Color(1f, 0.7f, 0.3f);
+
+        // Press Space
+        _startPressText = CreateText("PressSpace", "PRESS SPACE TO START", 28f, TextAlignmentOptions.Center,
+            new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -60), new Vector2(500, 50),
+            panelRT);
+
+        // Controls
+        CreateText("Controls", "A/D = Move   |   SPACE = Jump   |   Pass the bomb!", 18f, TextAlignmentOptions.Center,
+            new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, -140), new Vector2(600, 40),
+            panelRT).color = new Color(0.7f, 0.7f, 0.7f);
+    }
+
+    private void HideStartScreen()
+    {
+        if (_startPanel != null)
+            _startPanel.SetActive(false);
+    }
+
+    // ======================== VIGNETTE ========================
+
+    private void BuildVignette()
+    {
+        var vigObj = new GameObject("Vignette");
+        vigObj.transform.SetParent(_canvasRT, false);
+        var vigRT = vigObj.AddComponent<RectTransform>();
+        vigRT.anchorMin = Vector2.zero;
+        vigRT.anchorMax = Vector2.one;
+        vigRT.offsetMin = Vector2.zero;
+        vigRT.offsetMax = Vector2.zero;
+
+        _vignetteImage = vigObj.AddComponent<Image>();
+        _vignetteImage.color = new Color(1f, 0f, 0f, 0f);
+        _vignetteImage.raycastTarget = false;
+    }
+
+    private void UpdateProximityWarning()
+    {
+        if (_vignetteImage == null) return;
+
+        if (_playerObj == null || !_playerObj.activeInHierarchy ||
+            BombController.Instance == null || !BombController.Instance.IsActive)
+        {
+            _vignetteImage.color = new Color(1f, 0f, 0f, 0f);
+            return;
+        }
+
+        // Don't show warning if player holds the bomb
+        if (BombController.Instance.CurrentHolder == _playerObj)
+        {
+            _vignetteImage.color = new Color(1f, 0f, 0f, 0f);
+            return;
+        }
+
+        GameObject holder = BombController.Instance.CurrentHolder;
+        if (holder == null)
+        {
+            _vignetteImage.color = new Color(1f, 0f, 0f, 0f);
+            return;
+        }
+
+        float dist = Vector3.Distance(_playerObj.transform.position, holder.transform.position);
+        float warningDist = 4f;
+        float alpha = dist < warningDist ? Mathf.Lerp(0.25f, 0f, dist / warningDist) : 0f;
+
+        _vignetteImage.color = new Color(1f, 0f, 0f, alpha);
+    }
+
+    // ======================== BOMB ARROW ========================
+
+    private void BuildBombArrow()
+    {
+        var arrowObj = new GameObject("BombArrow");
+        arrowObj.transform.SetParent(_canvasRT, false);
+        _bombArrowRT = arrowObj.AddComponent<RectTransform>();
+        _bombArrowRT.sizeDelta = new Vector2(40, 40);
+
+        _bombArrowImage = arrowObj.AddComponent<Image>();
+        _bombArrowImage.color = new Color(1f, 0.3f, 0f, 0.8f);
+        _bombArrowImage.raycastTarget = false;
+        arrowObj.SetActive(false);
+    }
+
+    private void UpdateBombArrow()
+    {
+        if (_bombArrowRT == null || _bombArrowImage == null) return;
+
+        if (_playerObj == null || !_playerObj.activeInHierarchy ||
+            BombController.Instance == null || !BombController.Instance.IsActive)
+        {
+            _bombArrowRT.gameObject.SetActive(false);
+            return;
+        }
+
+        // Hide if player holds bomb
+        if (BombController.Instance.CurrentHolder == _playerObj)
+        {
+            _bombArrowRT.gameObject.SetActive(false);
+            return;
+        }
+
+        GameObject holder = BombController.Instance.CurrentHolder;
+        if (holder == null)
+        {
+            _bombArrowRT.gameObject.SetActive(false);
+            return;
+        }
+
+        // Check if bomb holder is on screen
+        Camera cam = Camera.main;
+        if (cam == null)
+        {
+            _bombArrowRT.gameObject.SetActive(false);
+            return;
+        }
+
+        Vector3 screenPos = cam.WorldToScreenPoint(holder.transform.position);
+        bool onScreen = screenPos.z > 0 && screenPos.x > 0 && screenPos.x < Screen.width &&
+                        screenPos.y > 0 && screenPos.y < Screen.height;
+
+        if (onScreen)
+        {
+            _bombArrowRT.gameObject.SetActive(false);
+            return;
+        }
+
+        // Show arrow at screen edge pointing toward holder
+        _bombArrowRT.gameObject.SetActive(true);
+
+        Vector3 dir = (holder.transform.position - _playerObj.transform.position).normalized;
+        Vector2 screenDir = new Vector2(dir.x, dir.y).normalized;
+
+        float margin = 50f;
+        float halfW = Screen.width * 0.5f - margin;
+        float halfH = Screen.height * 0.5f - margin;
+
+        Vector2 center = new Vector2(Screen.width * 0.5f, Screen.height * 0.5f);
+        float scale = Mathf.Min(
+            Mathf.Abs(screenDir.x) > 0.001f ? halfW / Mathf.Abs(screenDir.x) : float.MaxValue,
+            Mathf.Abs(screenDir.y) > 0.001f ? halfH / Mathf.Abs(screenDir.y) : float.MaxValue
+        );
+
+        Vector2 edgePos = center + screenDir * scale;
+        _bombArrowRT.position = edgePos;
+
+        float angle = Mathf.Atan2(screenDir.y, screenDir.x) * Mathf.Rad2Deg;
+        _bombArrowRT.rotation = Quaternion.Euler(0, 0, angle - 90f);
+
+        // Pulse
+        float pulse = (Mathf.Sin(Time.time * 6f) + 1f) * 0.5f;
+        _bombArrowImage.color = Color.Lerp(new Color(1f, 0.3f, 0f, 0.5f), new Color(1f, 0f, 0f, 1f), pulse);
+    }
+
+    // ======================== SCREEN FLASH ========================
+
+    private void BuildScreenFlash()
+    {
+        var flashObj = new GameObject("ScreenFlash");
+        flashObj.transform.SetParent(_canvasRT, false);
+        var flashRT = flashObj.AddComponent<RectTransform>();
+        flashRT.anchorMin = Vector2.zero;
+        flashRT.anchorMax = Vector2.one;
+        flashRT.offsetMin = Vector2.zero;
+        flashRT.offsetMax = Vector2.zero;
+
+        _screenFlashImage = flashObj.AddComponent<Image>();
+        _screenFlashImage.color = new Color(1f, 1f, 1f, 0f);
+        _screenFlashImage.raycastTarget = false;
+    }
+
+    public void TriggerScreenFlash()
+    {
+        if (_screenFlashImage != null)
+            StartCoroutine(ScreenFlashRoutine());
+    }
+
+    private IEnumerator ScreenFlashRoutine()
+    {
+        _screenFlashImage.color = new Color(1f, 0.9f, 0.7f, 0.8f);
+        float elapsed = 0f;
+        float duration = 0.15f;
+        while (elapsed < duration)
+        {
+            float t = elapsed / duration;
+            _screenFlashImage.color = new Color(1f, 0.9f, 0.7f, Mathf.Lerp(0.8f, 0f, t));
+            elapsed += Time.unscaledDeltaTime;
+            yield return null;
+        }
+        _screenFlashImage.color = new Color(1f, 1f, 1f, 0f);
+    }
+
+    // ======================== GAME OVER ========================
+
+    private void BuildGameOverPanel()
+    {
         var panelObj = new GameObject("GameOverPanel");
-        panelObj.transform.SetParent(parent, false);
+        panelObj.transform.SetParent(_canvasRT, false);
         var panelRT = panelObj.AddComponent<RectTransform>();
         panelRT.anchorMin = Vector2.zero;
         panelRT.anchorMax = Vector2.one;
@@ -144,22 +425,22 @@ public class GameUI : MonoBehaviour
         panelRT.offsetMax = Vector2.zero;
 
         var panelImage = panelObj.AddComponent<Image>();
-        panelImage.color = new Color(0, 0, 0, 0.7f);
+        panelImage.color = new Color(0, 0, 0, 0.75f);
 
         _gameOverPanel = panelObj;
 
-        // "GAME OVER" title - small
-        _winnerText = CreateText(panelRT, "WinnerText", "", 28f, TextAlignmentOptions.Center,
-            new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 60), new Vector2(400, 50));
+        _winnerText = CreateText("GameOverTitle", "", 24f, TextAlignmentOptions.Center,
+            new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 50), new Vector2(400, 40),
+            panelRT);
 
-        // Play Again button - centered, clean
+        // PLAY AGAIN button
         var btnObj = new GameObject("PlayAgainBtn");
         btnObj.transform.SetParent(panelRT, false);
         var btnRT = btnObj.AddComponent<RectTransform>();
         btnRT.anchorMin = new Vector2(0.5f, 0.5f);
         btnRT.anchorMax = new Vector2(0.5f, 0.5f);
         btnRT.anchoredPosition = new Vector2(0, -20);
-        btnRT.sizeDelta = new Vector2(220, 55);
+        btnRT.sizeDelta = new Vector2(200, 50);
 
         var btnImage = btnObj.AddComponent<Image>();
         btnImage.color = new Color(0.2f, 0.65f, 0.2f, 1f);
@@ -173,20 +454,22 @@ public class GameUI : MonoBehaviour
         btn.onClick.AddListener(OnRestartButton);
         _restartButton = btn;
 
-        _playAgainText = CreateText(btnRT, "PlayAgainText", "PLAY AGAIN", 22f, TextAlignmentOptions.Center,
-            new Vector2(0f, 0f), new Vector2(1f, 1f), Vector2.zero, Vector2.zero);
+        _playAgainText = CreateText("PlayAgainLabel", "PLAY AGAIN", 20f, TextAlignmentOptions.Center,
+            Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, btnRT);
         _playAgainText.color = Color.white;
         _playAgainText.raycastTarget = false;
-
-        // No share button, no big scores on game over panel
-        // Scores stay small in bottom-right corner (always visible from HUD)
 
         _gameOverPanel.SetActive(false);
     }
 
-    private TextMeshProUGUI CreateText(RectTransform parent, string name, string text, float fontSize,
-        TextAlignmentOptions alignment, Vector2 anchorMin, Vector2 anchorMax, Vector2 anchoredPos, Vector2 sizeDelta)
+    // ======================== HELPERS ========================
+
+    private TextMeshProUGUI CreateText(string name, string text, float fontSize,
+        TextAlignmentOptions alignment, Vector2 anchorMin, Vector2 anchorMax,
+        Vector2 anchoredPos, Vector2 sizeDelta, RectTransform parent = null)
     {
+        if (parent == null) parent = _canvasRT;
+
         var obj = new GameObject(name);
         obj.transform.SetParent(parent, false);
         var rt = obj.AddComponent<RectTransform>();
@@ -204,6 +487,8 @@ public class GameUI : MonoBehaviour
 
         return tmp;
     }
+
+    // ======================== HUD UPDATES ========================
 
     private void UpdateScoreDisplay()
     {
@@ -248,8 +533,8 @@ public class GameUI : MonoBehaviour
         else
         {
             var bot = holder.GetComponent<BotController>();
-            string name = bot != null ? bot.BotName : holder.name;
-            _bombHolderText.text = $"{name} has the bomb";
+            string botName = bot != null ? bot.BotName : holder.name;
+            _bombHolderText.text = $"{botName} has the bomb";
             _bombHolderText.color = Color.yellow;
         }
     }
@@ -263,6 +548,78 @@ public class GameUI : MonoBehaviour
             _bombHolderText.text = "";
 
         UpdateScoreDisplay();
+
+        // Round announcement
+        StartCoroutine(RoundAnnounceRoutine(round));
+
+        // Score popup (from round 2 onward)
+        if (round > 1)
+            StartCoroutine(ScorePopupRoutine());
+    }
+
+    private IEnumerator RoundAnnounceRoutine(int round)
+    {
+        if (_roundAnnounceText == null) yield break;
+
+        _roundAnnounceText.text = $"ROUND {round}";
+        _roundAnnounceText.gameObject.SetActive(true);
+
+        // Scale up from 0
+        var rt = _roundAnnounceText.GetComponent<RectTransform>();
+        float elapsed = 0f;
+
+        // Scale in (0.2s)
+        while (elapsed < 0.2f)
+        {
+            float t = elapsed / 0.2f;
+            rt.localScale = Vector3.one * Mathf.Lerp(0f, 1.2f, t);
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+        rt.localScale = Vector3.one;
+
+        // Hold (1s)
+        yield return new WaitForSeconds(1f);
+
+        // Fade out (0.5s)
+        elapsed = 0f;
+        while (elapsed < 0.5f)
+        {
+            float t = elapsed / 0.5f;
+            _roundAnnounceText.alpha = Mathf.Lerp(1f, 0f, t);
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        _roundAnnounceText.alpha = 1f;
+        _roundAnnounceText.gameObject.SetActive(false);
+    }
+
+    private IEnumerator ScorePopupRoutine()
+    {
+        if (_scorePopupText == null) yield break;
+
+        _scorePopupText.text = "+1";
+        _scorePopupText.gameObject.SetActive(true);
+
+        var rt = _scorePopupText.GetComponent<RectTransform>();
+        Vector2 startPos = rt.anchoredPosition;
+
+        float elapsed = 0f;
+        float duration = 1f;
+
+        while (elapsed < duration)
+        {
+            float t = elapsed / duration;
+            _scorePopupText.alpha = Mathf.Lerp(1f, 0f, t);
+            rt.anchoredPosition = startPos + new Vector2(0, t * 50f);
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        rt.anchoredPosition = startPos;
+        _scorePopupText.alpha = 1f;
+        _scorePopupText.gameObject.SetActive(false);
     }
 
     private void UpdateAliveCount(int count)
@@ -304,16 +661,12 @@ public class GameUI : MonoBehaviour
         }
 
         UpdateScoreDisplay();
-
         _gameOverPanel.SetActive(true);
 
         if (_winnerText != null)
         {
             string winner = RoundManager.Instance != null ? RoundManager.Instance.WinnerName : "Unknown";
-            if (winner == "You")
-                _winnerText.text = "YOU WIN!";
-            else
-                _winnerText.text = $"GAME OVER";
+            _winnerText.text = winner == "You" ? "YOU WIN!" : "GAME OVER";
         }
 
         if (_restartButton != null)
@@ -346,16 +699,12 @@ public class GameUI : MonoBehaviour
         }
 
         Transform head = _playerHead != null ? _playerHead : playerObj.transform;
-
         Quaternion originalRot = head.localRotation;
         float elapsed = 0f;
-        float shakeDuration = 2f;
-        float shakeSpeed = 12f;
-        float shakeAngle = 25f;
 
-        while (elapsed < shakeDuration)
+        while (elapsed < 2f)
         {
-            float angle = Mathf.Sin(elapsed * shakeSpeed) * shakeAngle;
+            float angle = Mathf.Sin(elapsed * 12f) * 25f;
             head.localRotation = originalRot * Quaternion.Euler(0f, angle, 0f);
             elapsed += Time.unscaledDeltaTime;
             yield return null;

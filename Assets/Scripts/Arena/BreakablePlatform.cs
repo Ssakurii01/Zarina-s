@@ -83,6 +83,19 @@ public class BreakablePlatform : MonoBehaviour
     private void Break()
     {
         _isBroken = true;
+        SFXManager.Instance?.PlayPlatformBreak();
+
+        // 30% chance to drop a power-up
+        if (Random.value < 0.3f)
+        {
+            var pickup = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            pickup.name = "PowerUp";
+            pickup.transform.position = transform.position;
+            pickup.transform.localScale = Vector3.one * 0.5f;
+            var powerUp = pickup.AddComponent<PowerUp>();
+            powerUp.SetType((PowerUp.Type)Random.Range(0, 3));
+        }
+
         Destroy(gameObject);
     }
 }

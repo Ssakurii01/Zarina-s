@@ -108,8 +108,9 @@ public class RoundManager : MonoBehaviour
         GameObject bombHolder = _aliveCharacters[randomIndex];
 
         if (BombController.Instance != null)
-            BombController.Instance.AssignBomb(bombHolder);
+            BombController.Instance.AssignBomb(bombHolder, _currentRound);
 
+        SFXManager.Instance?.PlayRoundStart();
         OnRoundStart?.Invoke(_currentRound);
     }
 
